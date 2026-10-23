@@ -76,7 +76,8 @@ func handleActions(c *td.Client, m *td.Message) error {
 func handleChatMemberAdd(c *td.Client, m *td.Message) error {
 	chatID := m.ChatID()
 	added := m.Content.(*td.MessageChatAddMembers).MemberUserIds
-	if c.Me == nil || !slices.Contains(added, c.Me.Id) {
+	me := c.Me()
+	if me == nil || me.Id == 0 || !slices.Contains(added, me.Id) {
 		return nil
 	}
 
@@ -159,7 +160,7 @@ func handleVoiceChatAction(c *td.Client, m *td.Message) error {
 		utils.Log.Errorf("Failed to get chat state for %d: %v", chatID, err)
 		return nil
 	}
-	s.SetVoiceChat(isActive)
+	s.SetVoice(utils.IfElse(isActive, core.VoiceActive, core.VoiceInactive))
 
 	msgKey := utils.IfElse(isActive, "voicechat_started", "voicechat_ended")
 	text := F(chatID, msgKey, locales.Arg{"duration": utils.FormatDuration(int(duration))})

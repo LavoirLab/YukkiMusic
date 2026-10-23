@@ -20,11 +20,11 @@ package modules
 import (
 	"context"
 	"errors"
-	"strconv"
 	"strings"
 	"time"
 
 	td "github.com/AshokShau/gotdbot"
+	tg "github.com/amarnathcjd/gogram/telegram"
 
 	"yukkimusic/config"
 	"yukkimusic/internal/core"
@@ -292,21 +292,24 @@ func (p *playReq) fetch() (err error) {
 }
 
 func (p *playReq) joinCall(cs *core.ChatState) error {
-	snap, err := cs.Snapshot()
+	st, err := cs.Status()
 	if err != nil {
 		utils.Log.Errorf("Error checking voicechat state: %v", err)
 		return p.wrap(err)
 	}
 
+	// A banned assistant is checked first: the voice chat state is unknown
+	// while it is banned.
 	switch {
-	case snap.VoiceChatActive != nil && !*snap.VoiceChatActive:
-		return p.errf("err_no_active_voicechat")
-	case snap.AssistantBanned:
+	case st.Presence == core.PresenceBanned:
+		self := cs.Assistant().Self
 		return p.errf("err_assistant_banned", locales.Arg{
-			"user": mentionHTML(cs.Assistant.Self.FirstName+" "+cs.Assistant.Self.LastName, cs.Assistant.Self.ID),
-			"id":   utils.IntToStr(cs.Assistant.Self.ID),
+			"user": mentionHTML(self.FirstName+" "+self.LastName, self.ID),
+			"id":   utils.IntToStr(self.ID),
 		})
-	case snap.AssistantPresent:
+	case st.Voice == core.VoiceInactive:
+		return p.errf("err_no_active_voicechat")
+	case st.Presence == core.PresenceJoined:
 		return nil
 	}
 
@@ -485,8 +488,10 @@ func (p *playReq) onPlayError(err error) (wait time.Duration, stop error) {
 		return 0, err
 	case flood > 0:
 		return time.Duration(flood) * time.Second, nil
-	case strings.Contains(msg, "INTERDC_X_CALL_ERROR"), strings.Contains(msg, "GROUPCALL_INVALID"):
+	case strings.Contains(msg, "INTERDC_X_CALL_ERROR"):
 		return 2 * time.Second, nil
+	case strings.Contains(msg, "GROUPCALL_INVALID"):
+		return 0, p.closeRoom("play_unable")
 	case errors.Is(err, ubot.ErrConnectionTimeout):
 		return 0, p.closeRoom("err_connection_timeout")
 	case strings.Contains(msg, "Streaming is not supported when using RTMP"):
@@ -578,7 +583,7 @@ func markVoiceChatInactive(roomID int64) {
 		utils.Log.Errorf("failed to get chat state to mark voice chat inactive: %v", err)
 		return
 	}
-	cs.SetVoiceChat(false)
+	cs.SetVoice(core.VoiceInactive)
 }
 
 // getFloodWait returns the retry-after seconds for a flood-wait error,
@@ -590,13 +595,7 @@ func getFloodWait(err error) int {
 		}
 	}
 
-	msg := err.Error()
-	if _, after, ok := strings.Cut(msg, "FLOOD_WAIT_"); ok {
-		if wait, cerr := strconv.Atoi(after); cerr == nil {
-			return wait
-		}
-	}
-	return 0
+	return tg.GetFloodWait(err)
 }
 
 func getErrorMessage(chatID int64, err error) string {
