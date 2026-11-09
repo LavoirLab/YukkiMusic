@@ -40,6 +40,8 @@ var (
 	DisableColour = getEnvBool("DISABLE_COLOUR", false)
 	FallenAPIURL  = getEnv("FALLEN_API_URL", "https://beta.fallenapi.fun")
 	FallenAPIKey  = getEnv("FALLEN_API_KEY")
+	ShrutiAPIKey  = getEnv("SHRUTI_API_KEY")
+	RiteshytAPIKey = getEnv("RITESHYT_API_KEY")
 
 	DefaultLang    = getEnv("DEFAULT_LANG", "en")
 	DurationLimit  = getEnvInt("DURATION_LIMIT", 4200)
