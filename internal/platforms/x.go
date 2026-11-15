@@ -35,7 +35,7 @@ import (
 const PlatformShruti state.PlatformName = "Shruti"
 
 // shrutiAPIURL is the Shruti API download endpoint.
-const shrutiAPIURL = "https://api.shrutibots.site/download"
+const shrutiAPIURL = "https://api.shrutibots.in/download"
 
 func shrutiAPIKey() string {
 	return "ShrutiBots1P9oduKISPWG6uuKbAmg"

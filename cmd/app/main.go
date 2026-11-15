@@ -104,7 +104,7 @@ func run() error {
 
 func startHTTPServer() {
 	go func() {
-		addr := "0.0.0.0:" + config.Port
+		addr := "127.0.0.1:" + config.Port
 
 		utils.Log.Infof("HTTP server listening on %s", addr)
 
